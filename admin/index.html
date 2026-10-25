@@ -18,6 +18,21 @@
   .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px 22px; margin-bottom:16px; }
   .narrow { max-width:420px; margin:10vh auto 0; }
   .brand { font-weight:700; letter-spacing:.04em; color:var(--accent); }
+  .badge.active { background:var(--soft); color:var(--ok); }
+  .badge.suspendue, .badge.expiree { background:var(--soft); color:var(--err); }
+  .badge.bientot { background:var(--soft); color:var(--warn); }
+  .nav { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+  .nav button { background:transparent; color:var(--muted); border:1px solid var(--border); padding:7px 14px; font-size:14px; }
+  .nav button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .tools { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .tools input[type=search] { flex:1; min-width:180px; width:auto; }
+  .tools select { width:auto; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:10px; margin-bottom:8px; }
+  .stat { padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--card); }
+  .stat b { display:block; font-size:24px; line-height:1.2; }
+  .stat span { color:var(--muted); font-size:13px; }
+  .histo { font-size:13px; color:var(--muted); margin:6px 0 0; padding:0; list-style:none; }
+  .histo li { padding:5px 0; border-top:1px solid var(--border); }
   .logo { display:block; height:40px; width:auto; }
   .logo-grand { height:90px; margin:0 0 14px; }
   header { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
@@ -93,6 +108,114 @@
       <div><span id="who" class="who"></span> <button id="logout" class="ghost small" type="button">Déconnexion</button></div>
     </header>
 
+    <nav class="nav" id="nav">
+      <button type="button" data-page="demandes">Demandes</button>
+      <button type="button" data-page="licences">Licences</button>
+      <button type="button" data-page="journal">Journal</button>
+      <button type="button" data-page="stats">Statistiques</button>
+    </nav>
+
+    <!-- Liste des licences -->
+    <section id="v-licences" class="card hidden">
+      <h1>Licences</h1>
+      <div class="tools">
+        <input id="lic-q" type="search" placeholder="Rechercher : clé, nom, société, email…">
+        <select id="lic-f">
+          <option value="actives">En cours</option>
+          <option value="bientot">Expirent sous 30 jours</option>
+          <option value="expirees">Expirées</option>
+          <option value="suspendues">Suspendues</option>
+          <option value="toutes">Toutes</option>
+        </select>
+        <button id="lic-csv" class="ghost small" type="button">Exporter CSV</button>
+      </div>
+      <div id="lic-list" class="list"></div>
+    </section>
+
+    <!-- Detail d'une licence -->
+    <div id="v-licence" class="hidden">
+      <p><button id="lic-back" class="ghost small" type="button">← Toutes les licences</button></p>
+      <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <h1 id="li-cle" style="margin:0;font-family:Consolas,'Courier New',monospace"></h1><span id="li-badge" class="badge"></span>
+        </div>
+        <table class="info" id="li-info" style="margin-top:10px"></table>
+        <div id="li-postes"></div>
+      </section>
+
+      <section class="card">
+        <h2>Modifier la licence</h2>
+        <form id="f-lic">
+          <div class="row">
+            <div><label for="li-debut">Début</label><input id="li-debut" type="date" required></div>
+            <div>
+              <label for="li-fin">Fin</label><input id="li-fin" type="date" required>
+              <div class="actions" style="margin-top:6px">
+                <button type="button" class="ghost small" data-prolonge="1">+1 mois</button>
+                <button type="button" class="ghost small" data-prolonge="3">+3 mois</button>
+                <button type="button" class="ghost small" data-prolonge="6">+6 mois</button>
+                <button type="button" class="ghost small" data-prolonge="12">+1 an</button>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div><label for="li-postes-max">Nombre de postes</label><input id="li-postes-max" type="number" min="1" max="1000" required></div>
+            <fieldset>
+              <legend>Type</legend>
+              <label class="choice"><input type="radio" name="li-type" value="payante">Payante</label>
+              <label class="choice"><input type="radio" name="li-type" value="essai">Essai gratuit</label>
+            </fieldset>
+          </div>
+          <fieldset>
+            <legend>Outils inclus</legend>
+            <label class="choice"><input type="checkbox" name="li-outils" value="cotation">Cotation Auto</label>
+            <label class="choice"><input type="checkbox" name="li-outils" value="plansvente">Plans de vente</label>
+          </fieldset>
+          <label for="li-note">Note interne</label>
+          <textarea id="li-note"></textarea>
+          <div class="actions">
+            <button id="li-save" class="ok" type="submit">Enregistrer</button>
+            <button id="li-statut" class="danger" type="button"></button>
+          </div>
+          <div id="li-msg" class="msg err"></div>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Comptes rattachés</h2>
+        <div id="li-comptes"></div>
+        <form id="f-membre" style="margin-top:12px">
+          <label for="li-email">Ajouter un collaborateur (email)</label>
+          <div class="tools" style="margin:0">
+            <input id="li-email" type="email" placeholder="prenom.nom@societe.fr" style="flex:1;min-width:200px;width:auto">
+            <button class="ok small" type="submit">Ajouter</button>
+          </div>
+          <div class="hint">Aucun email n'est envoyé : prévenez la personne de créer son compte avec exactement cette adresse. Sans compte, elle sera rattachée à sa première connexion.</div>
+          <div id="li-membre-msg" class="msg err"></div>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Historique</h2>
+        <ul id="li-histo" class="histo"></ul>
+      </section>
+    </div>
+
+    <!-- Journal -->
+    <section id="v-journal" class="card hidden">
+      <h1>Journal</h1>
+      <p>Les 200 derniers événements (créations, modifications, suspensions, postes libérés…).</p>
+      <ul id="j-list" class="histo"></ul>
+    </section>
+
+    <!-- Statistiques -->
+    <section id="v-stats" class="card hidden">
+      <h1>Statistiques</h1>
+      <div id="s-grid" class="stats"></div>
+      <h2 style="margin-top:18px">Versions de Prismal utilisées</h2>
+      <div id="s-versions" class="hint"></div>
+    </section>
+
     <!-- Liste des demandes -->
     <section id="v-list" class="card hidden">
       <h1>Demandes d'activation</h1>
@@ -101,6 +224,7 @@
         <button type="button" data-s="validee">Validées</button>
         <button type="button" data-s="refusee">Refusées</button>
         <button type="button" data-s="toutes">Toutes</button>
+        <button type="button" id="dem-csv" class="ghost small" style="margin-left:auto">Exporter CSV</button>
       </div>
       <div id="list" class="list"></div>
     </section>
@@ -297,11 +421,14 @@
   }
 
   // ---------- Navigation ----------
-  function demandeDansAdresse() { return new URLSearchParams(location.search).get("demande"); }
-  function allerA(demandeId) {
-    history.pushState(null, "", location.pathname + (demandeId ? "?demande=" + encodeURIComponent(demandeId) : ""));
+  // Adresses : ?demande=<id> | ?licence=<id> | ?page=licences|journal|stats | (rien = liste des demandes)
+  function naviguer(p) {
+    var q = new URLSearchParams();
+    for (var k in p) if (p[k]) q.set(k, p[k]);
+    history.pushState(null, "", location.pathname + (q.toString() ? "?" + q.toString() : ""));
     route();
   }
+  function allerA(demandeId) { naviguer(demandeId ? { demande: demandeId } : {}); }
   window.addEventListener("popstate", route);
 
   function afficherLogin() { show("v-app", false); show("v-login", true); $("l-email").focus(); }
@@ -316,10 +443,23 @@
   }
 
   function route() {
-    var id = demandeDansAdresse();
-    show("v-list", !id); show("v-detail", !!id);
-    if (id) chargerDemande(id); else chargerListe();
+    var q = new URLSearchParams(location.search);
+    var dem = q.get("demande"), lic = q.get("licence"), page = q.get("page") || "demandes";
+    var courant = dem ? "demandes" : lic ? "licences" : page;
+    ["v-list", "v-detail", "v-licences", "v-licence", "v-journal", "v-stats"].forEach(function (v) { show(v, false); });
+    Array.prototype.forEach.call($("nav").children, function (b) { b.classList.toggle("on", b.getAttribute("data-page") === courant); });
+    if (dem) { show("v-detail"); chargerDemande(dem); }
+    else if (lic) { show("v-licence"); chargerLicence(lic); }
+    else if (page === "licences") { show("v-licences"); chargerLicences(); }
+    else if (page === "journal") { show("v-journal"); chargerJournal(); }
+    else if (page === "stats") { show("v-stats"); chargerStats(); }
+    else { show("v-list"); chargerListe(); }
   }
+  $("nav").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    var p = b.getAttribute("data-page");
+    naviguer(p === "demandes" ? {} : { page: p });
+  });
 
   $("f-login").addEventListener("submit", function (e) {
     e.preventDefault();
@@ -368,15 +508,17 @@
   // ---------- Liste ----------
   var filtre = "en_attente";
   $("tabs").addEventListener("click", function (e) {
-    var b = e.target.closest("button"); if (!b) return;
+    var b = e.target.closest("button"); if (!b || !b.getAttribute("data-s")) return;
     filtre = b.getAttribute("data-s");
     Array.prototype.forEach.call($("tabs").children, function (x) { x.classList.toggle("on", x === b); });
     chargerListe();
   });
 
+  var demandesAffichees = [];
   function chargerListe() {
     var list = $("list"); list.replaceChildren(el("p", { class: "empty", text: "Chargement…" }));
     api("demandes", { statut: filtre }).then(function (r) {
+      demandesAffichees = r.demandes;
       list.replaceChildren();
       if (!r.demandes.length) { list.appendChild(el("p", { class: "empty", text: "Aucune demande." })); return; }
       r.demandes.forEach(function (d) {
@@ -405,7 +547,10 @@
         + (l.type === "essai" ? "essai · " : "") + "du " + frDate(l.debut) + " au " + frDate(l.fin) + (l.statut !== "active" ? " · " + l.statut : "");
       keys.appendChild(el("div", { class: "key" }, [
         el("div", {}, [el("div", { text: l.cle }), el("div", { class: "hint", style: "font-family:inherit", text: detail })]),
-        boutonCopier(l.cle)
+        el("div", { style: "display:flex;gap:6px" }, [
+          el("button", { class: "ghost small", type: "button", text: "Ouvrir", onclick: function () { naviguer({ licence: l.id }); } }),
+          boutonCopier(l.cle)
+        ])
       ]));
       keys.appendChild(blocPostes(l));
     });
@@ -425,7 +570,7 @@
         if (!confirm("Libérer le poste " + a.poste + " (session " + a.utilisateur + ") ?\n\nSa place redeviendra disponible. Le poste garde son accès jusqu'à son prochain renouvellement de licence (démarrage de Revit en ligne).")) return;
         b.disabled = true;
         api("liberer", { id: a.id }).then(function () {
-          if (courante && courante.demande) chargerDemande(courante.demande.id);
+          route();
         }).catch(function (e) { b.disabled = false; if (!siDeconnecte(e)) alert(e.message); });
       });
       box.appendChild(el("div", { style: "display:flex;gap:8px;align-items:center;margin-top:4px" }, [
@@ -595,6 +740,248 @@
       btn.disabled = false; chargerDemande(courante.demande.id);
     }).catch(function (e) { btn.disabled = false; if (!siDeconnecte(e)) $("r-msg").textContent = e.message; });
   });
+
+  // ---------- Outils communs aux nouvelles pages ----------
+  var ETATS = { active: "Active", suspendue: "Suspendue", expiree: "Expirée", bientot: "Expire bientôt" };
+  var CHAMPS = { debut: "début", fin: "fin", postes_max: "postes", outils: "outils", type: "type", note: "note" };
+
+  function etatLicence(l) {
+    var auj = isoJour(new Date()), dans30 = isoJour(new Date(Date.now() + 30 * 86400000));
+    if (l.statut === "suspendue") return "suspendue";
+    if (l.fin < auj) return "expiree";
+    if (l.fin <= dans30) return "bientot";
+    return "active";
+  }
+  function ajouterMois(iso, n) {
+    var d = new Date(iso + "T00:00:00"), jour = d.getDate();
+    d.setMonth(d.getMonth() + n);
+    if (d.getDate() !== jour) d.setDate(0);
+    return isoJour(d);
+  }
+  function nomOutils(o) { return (o || []).map(function (x) { return OUTILS[x] || x; }).join(", "); }
+  function valeurLisible(k, v) {
+    if (v === null || v === undefined || v === "") return "(vide)";
+    if (k === "debut" || k === "fin") return frDate(v);
+    if (k === "outils") return nomOutils(v);
+    if (k === "type") return v === "essai" ? "essai" : "payante";
+    return String(v);
+  }
+  function libelleEvenement(h) {
+    var d = h.details || {};
+    switch (h.action) {
+      case "creation": return "Licence créée (" + (d.type === "essai" ? "essai" : "payante") + ", " + nomOutils(d.outils) + ", " + (d.postes || 1) + " poste(s), du " + frDate(d.debut) + " au " + frDate(d.fin) + ")";
+      case "modification":
+        return "Modifiée : " + Object.keys(d.apres || {}).map(function (k) {
+          return (CHAMPS[k] || k) + " " + valeurLisible(k, (d.avant || {})[k]) + " → " + valeurLisible(k, d.apres[k]);
+        }).join(" ; ");
+      case "suspension": return "Licence suspendue" + (d.motif ? " (" + d.motif + ")" : "");
+      case "reactivation": return "Licence réactivée" + (d.motif ? " (" + d.motif + ")" : "");
+      case "liberation_poste": return "Poste libéré : " + (d.poste || "") + " (session " + (d.utilisateur || "") + ")";
+      case "ajout_collaborateur": return "Collaborateur ajouté : " + (d.email || "") + (d.invitation ? " (invitation, pas encore de compte)" : "");
+      case "retrait_collaborateur": return "Collaborateur retiré : " + (d.email || "");
+      case "refus": return "Demande refusée" + (d.motif ? " (" + d.motif + ")" : "");
+      case "alerte_expiration": return "Alerte d'expiration envoyée à l'administrateur (seuil " + d.seuil + " jours)";
+      default: return h.action;
+    }
+  }
+  function telecharger(nom, lignes) {
+    var csv = lignes.map(function (l) {
+      return l.map(function (c) { return '"' + String(c === null || c === undefined ? "" : c).replace(/"/g, '""') + '"'; }).join(";");
+    }).join("\r\n");
+    var blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    var a = el("a", { href: URL.createObjectURL(blob), download: nom });
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  function erreurDans(box, e) { if (!siDeconnecte(e)) box.replaceChildren(el("p", { class: "msg err", text: e.message })); }
+
+  // ---------- Licences : liste ----------
+  var toutesLicences = [], licencesAffichees = [];
+  function chargerLicences() {
+    var list = $("lic-list"); list.replaceChildren(el("p", { class: "empty", text: "Chargement…" }));
+    api("licences").then(function (r) { toutesLicences = r.licences; afficherLicences(); }).catch(function (e) { erreurDans(list, e); });
+  }
+  function afficherLicences() {
+    var list = $("lic-list"), q = $("lic-q").value.trim().toLowerCase(), f = $("lic-f").value;
+    licencesAffichees = toutesLicences.filter(function (l) {
+      var e = etatLicence(l);
+      if (f === "actives" && !(e === "active" || e === "bientot")) return false;
+      if (f === "bientot" && e !== "bientot") return false;
+      if (f === "expirees" && e !== "expiree") return false;
+      if (f === "suspendues" && e !== "suspendue") return false;
+      if (!q) return true;
+      var c = l.clients || {};
+      return [l.cle, c.nom, c.email, c.societe].join(" ").toLowerCase().indexOf(q) >= 0;
+    });
+    list.replaceChildren();
+    if (!licencesAffichees.length) { list.appendChild(el("p", { class: "empty", text: "Aucune licence." })); return; }
+    licencesAffichees.forEach(function (l) {
+      var c = l.clients || {}, e = etatLicence(l);
+      list.appendChild(el("button", { class: "item", type: "button", onclick: function () { naviguer({ licence: l.id }); } }, [
+        el("div", {}, [
+          el("div", { text: l.cle + " · " + (c.nom || c.email || "") + (c.societe ? " · " + c.societe : "") }),
+          el("div", { class: "sub", text: nomOutils(l.outils) + " · " + l.postes_utilises + "/" + l.postes_max + " poste(s) · fin le " + frDate(l.fin)
+            + (l.type === "essai" ? " · essai" : "") + (l.derniere_connexion ? " · dernière connexion " + frDateHeure(l.derniere_connexion) : " · jamais connectée") })
+        ]),
+        el("span", { class: "badge " + e, text: ETATS[e] })
+      ]));
+    });
+  }
+  $("lic-q").addEventListener("input", afficherLicences);
+  $("lic-f").addEventListener("change", afficherLicences);
+  $("lic-csv").addEventListener("click", function () {
+    var lignes = [["Clé", "Client", "Email", "Société", "Type", "État", "Outils", "Début", "Fin", "Postes max", "Postes utilisés", "Dernière connexion", "Note"]];
+    licencesAffichees.forEach(function (l) {
+      var c = l.clients || {};
+      lignes.push([l.cle, c.nom, c.email, c.societe, l.type, ETATS[etatLicence(l)], nomOutils(l.outils), l.debut, l.fin, l.postes_max, l.postes_utilises,
+        l.derniere_connexion ? frDateHeure(l.derniere_connexion) : "", l.note]);
+    });
+    telecharger("prismal-licences-" + isoJour(new Date()) + ".csv", lignes);
+  });
+  $("dem-csv").addEventListener("click", function () {
+    var lignes = [["Date de la demande", "Statut", "Nom", "Email", "Société", "Référence de paiement", "Montant (€)", "Traitée le", "Note interne"]];
+    demandesAffichees.forEach(function (d) {
+      var p = d.profil || {};
+      lignes.push([frDateHeure(d.cree_le), STATUTS[d.statut] || d.statut, nomClient(p), p.email, p.societe, d.reference_paiement,
+        d.montant === null || d.montant === undefined ? "" : String(d.montant).replace(".", ","), d.traite_le ? frDateHeure(d.traite_le) : "", d.note]);
+    });
+    telecharger("prismal-demandes-" + isoJour(new Date()) + ".csv", lignes);
+  });
+  $("lic-back").addEventListener("click", function () { naviguer({ page: "licences" }); });
+
+  // ---------- Licence : detail et modification ----------
+  var licCourante = null;
+  function chargerLicence(id) {
+    $("li-cle").textContent = "Chargement…"; $("li-badge").textContent = ""; $("li-info").replaceChildren();
+    api("licence", { id: id }).then(function (r) {
+      var l = r.licence, c = l.clients || {}, e = etatLicence(l);
+      licCourante = l;
+      $("li-cle").textContent = l.cle;
+      $("li-badge").className = "badge " + e; $("li-badge").textContent = ETATS[e];
+      $("li-info").replaceChildren(
+        ligne("Client", c.nom), ligne("Email", c.email), ligne("Société", c.societe),
+        ligne("Période", "du " + frDate(l.debut) + " au " + frDate(l.fin)), ligne("Outils", nomOutils(l.outils)),
+        ligne("Postes", (l.activations || []).length + " utilisé(s) sur " + l.postes_max), ligne("Type", l.type === "essai" ? "Essai gratuit" : "Payante"),
+        ligne("Créée le", frDateHeure(l.cree_le))
+      );
+      $("li-postes").replaceChildren(blocPostes(l));
+
+      $("li-debut").value = l.debut; $("li-fin").value = l.fin; $("li-postes-max").value = l.postes_max; $("li-note").value = l.note || "";
+      document.querySelectorAll("input[name=li-type]").forEach(function (x) { x.checked = x.value === l.type; });
+      document.querySelectorAll("input[name=li-outils]").forEach(function (x) { x.checked = (l.outils || []).indexOf(x.value) >= 0; });
+      $("li-msg").textContent = "";
+      var susp = l.statut === "suspendue", b = $("li-statut");
+      b.textContent = susp ? "Réactiver la licence" : "Suspendre la licence"; b.className = susp ? "ok" : "danger";
+
+      var comptes = $("li-comptes"); comptes.replaceChildren();
+      r.comptes.forEach(function (m) {
+        var p = m.profil || {};
+        comptes.appendChild(el("div", { class: "key", style: "font-family:inherit;font-size:14px" }, [
+          el("span", { text: (p.email || m.user_id) + (nomClient(p) !== (p.email || "") && p.nom ? " · " + nomClient(p) : "") }),
+          el("button", { class: "ghost small", type: "button", text: "Retirer", onclick: function () { retirerMembre({ user_id: m.user_id }, p.email || "ce compte"); } })
+        ]));
+      });
+      r.invitations.forEach(function (m) {
+        comptes.appendChild(el("div", { class: "key", style: "font-family:inherit;font-size:14px" }, [
+          el("span", { text: m.email + " (invité, pas encore de compte)" }),
+          el("button", { class: "ghost small", type: "button", text: "Retirer", onclick: function () { retirerMembre({ email: m.email }, m.email); } })
+        ]));
+      });
+      if (!comptes.children.length) comptes.appendChild(el("p", { class: "empty", text: "Aucun compte rattaché." }));
+      $("li-membre-msg").textContent = ""; $("li-email").value = "";
+
+      var h = $("li-histo"); h.replaceChildren();
+      r.historique.forEach(function (x) {
+        h.appendChild(el("li", { text: frDateHeure(x.le) + " · " + libelleEvenement(x) + (x.par_email ? " · par " + x.par_email : "") }));
+      });
+      if (!r.historique.length) h.appendChild(el("li", { class: "empty", text: "Aucun événement." }));
+    }).catch(function (e) { if (!siDeconnecte(e)) { $("li-cle").textContent = "Licence introuvable"; $("li-info").replaceChildren(ligne("Erreur", e.message)); } });
+  }
+
+  document.querySelectorAll("[data-prolonge]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var auj = isoJour(new Date()), base = $("li-fin").value && $("li-fin").value >= auj ? $("li-fin").value : auj;
+      $("li-fin").value = ajouterMois(base, parseInt(b.getAttribute("data-prolonge"), 10));
+    });
+  });
+
+  $("f-lic").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var msg = $("li-msg"); msg.className = "msg err"; msg.textContent = "";
+    var outils = Array.prototype.map.call(document.querySelectorAll("input[name=li-outils]:checked"), function (x) { return x.value; });
+    var postes = parseInt($("li-postes-max").value, 10), debut = $("li-debut").value, fin = $("li-fin").value;
+    var type = (document.querySelector("input[name=li-type]:checked") || {}).value;
+    if (!outils.length) { msg.textContent = "Choisissez au moins un outil."; return; }
+    if (!(postes >= 1 && postes <= 1000)) { msg.textContent = "Le nombre de postes doit être entre 1 et 1000."; return; }
+    if (!debut || !fin || fin < debut) { msg.textContent = "La date de fin doit être après la date de début."; return; }
+    var utilises = (licCourante.activations || []).length;
+    if (postes < utilises && !confirm("Cette licence a déjà " + utilises + " poste(s) enregistré(s) pour " + postes + " autorisé(s). Les postes en trop ne seront pas supprimés mais aucun nouveau poste ne pourra s'ajouter. Continuer ?")) return;
+    var btn = $("li-save"); btn.disabled = true;
+    api("modifier_licence", { id: licCourante.id, debut: debut, fin: fin, postes_max: postes, outils: outils, type: type, note: $("li-note").value })
+      .then(function () { btn.disabled = false; route(); })
+      .catch(function (err) { btn.disabled = false; if (!siDeconnecte(err)) msg.textContent = err.message; });
+  });
+
+  $("li-statut").addEventListener("click", function () {
+    var suspendre = licCourante.statut !== "suspendue", msg = $("li-msg"); msg.className = "msg err"; msg.textContent = "";
+    var motif = "";
+    if (suspendre) {
+      motif = prompt("Suspendre cette licence ? Les postes perdront leur accès à leur prochain démarrage de Revit en ligne.\n\nMotif (interne, facultatif) :");
+      if (motif === null) return;
+    } else if (!confirm("Réactiver cette licence ?")) return;
+    api("statut_licence", { id: licCourante.id, statut: suspendre ? "suspendue" : "active", motif: motif })
+      .then(function () { route(); })
+      .catch(function (err) { if (!siDeconnecte(err)) msg.textContent = err.message; });
+  });
+
+  $("f-membre").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var msg = $("li-membre-msg"); msg.className = "msg err"; msg.textContent = "";
+    var email = $("li-email").value.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.textContent = "Adresse email invalide."; return; }
+    api("ajouter_membre", { id: licCourante.id, email: email }).then(function (r) {
+      route();
+    }).catch(function (err) { if (!siDeconnecte(err)) msg.textContent = err.message; });
+  });
+
+  function retirerMembre(cible, nom) {
+    if (!confirm("Retirer " + nom + " de cette licence ?\n\nLes postes déjà enregistrés ne sont pas supprimés : libérez-les séparément si besoin.")) return;
+    api("retirer_membre", Object.assign({ id: licCourante.id }, cible)).then(function () { route(); })
+      .catch(function (err) { if (!siDeconnecte(err)) alert(err.message); });
+  }
+
+  // ---------- Journal ----------
+  function chargerJournal() {
+    var ul = $("j-list"); ul.replaceChildren(el("li", { class: "empty", text: "Chargement…" }));
+    api("journal").then(function (r) {
+      ul.replaceChildren();
+      if (!r.evenements.length) { ul.appendChild(el("li", { class: "empty", text: "Aucun événement." })); return; }
+      r.evenements.forEach(function (x) {
+        var cle = x.licences && x.licences.cle;
+        ul.appendChild(el("li", {}, [
+          frDateHeure(x.le) + " · ",
+          cle ? el("a", { href: "#", style: "color:var(--accent)", text: cle, onclick: function (ev) { ev.preventDefault(); naviguer({ licence: x.licence_id }); } }) : "",
+          (cle ? " · " : "") + libelleEvenement(x) + (x.par_email ? " · par " + x.par_email : "")
+        ]));
+      });
+    }).catch(function (e) { if (!siDeconnecte(e)) ul.replaceChildren(el("li", { class: "msg err", text: e.message })); });
+  }
+
+  // ---------- Statistiques ----------
+  function euros(n) { return Number(n || 0).toLocaleString("fr-FR", { style: "currency", currency: "EUR" }); }
+  function chargerStats() {
+    var grid = $("s-grid"); grid.replaceChildren(el("p", { class: "empty", text: "Chargement…" })); $("s-versions").replaceChildren();
+    api("stats").then(function (s) {
+      var cases = [
+        ["Clients avec une licence en cours", s.clients], ["Licences en cours", s.licences_en_cours], ["Expirent sous 30 jours", s.licences_expirent_30j],
+        ["Essais en cours", s.essais_en_cours], ["Licences suspendues", s.licences_suspendues], ["Licences expirées", s.licences_expirees],
+        ["Demandes en attente", s.demandes_en_attente], ["Postes enregistrés", s.postes_enregistres],
+        ["Montant saisi (12 derniers mois)", euros(s.montant_12_mois)], ["Montant saisi (total)", euros(s.montant_total)]
+      ];
+      grid.replaceChildren.apply(grid, cases.map(function (c) { return el("div", { class: "stat" }, [el("b", { text: String(c[1]) }), el("span", { text: c[0] })]); }));
+      var v = Object.keys(s.versions || {}).sort(function (a, b) { return s.versions[b] - s.versions[a]; });
+      $("s-versions").textContent = v.length ? v.map(function (k) { return "v" + k + " : " + s.versions[k] + " poste(s)"; }).join("  ·  ") : "Aucun poste enregistré.";
+    }).catch(function (e) { erreurDans(grid, e); });
+  }
 
   demarrer();
 </script>
