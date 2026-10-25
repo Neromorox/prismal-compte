@@ -137,7 +137,7 @@
       <p><button id="lic-back" class="ghost small" type="button">← Toutes les licences</button></p>
       <section class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-          <h1 id="li-cle" style="margin:0;font-family:Consolas,'Courier New',monospace"></h1><span id="li-badge" class="badge"></span>
+          <h1 id="li-cle" style="margin:0;font-family:Consolas,'Courier New',monospace"></h1><span id="li-copie"></span><span id="li-badge" class="badge"></span>
         </div>
         <table class="info" id="li-info" style="margin-top:10px"></table>
         <div id="li-postes"></div>
@@ -851,11 +851,11 @@
   // ---------- Licence : detail et modification ----------
   var licCourante = null;
   function chargerLicence(id) {
-    $("li-cle").textContent = "Chargement…"; $("li-badge").textContent = ""; $("li-info").replaceChildren();
+    $("li-cle").textContent = "Chargement…"; $("li-badge").textContent = ""; $("li-copie").replaceChildren(); $("li-info").replaceChildren();
     api("licence", { id: id }).then(function (r) {
       var l = r.licence, c = l.clients || {}, e = etatLicence(l);
       licCourante = l;
-      $("li-cle").textContent = l.cle;
+      $("li-cle").textContent = l.cle; $("li-copie").replaceChildren(boutonCopier(l.cle, "Copier la clé"));
       $("li-badge").className = "badge " + e; $("li-badge").textContent = ETATS[e];
       $("li-info").replaceChildren(
         ligne("Client", c.nom), ligne("Email", c.email), ligne("Société", c.societe),
