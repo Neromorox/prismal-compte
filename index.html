@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Prismal – Compte</title>
+<style>
+  :root { --bg:#f4f5f7; --card:#fff; --text:#1d2330; --muted:#5b6475; --accent:#2f5bd3; --ok:#1e7a46; --err:#b42318; --border:#d5d9e0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171c; --card:#1d2128; --text:#e8eaee; --muted:#a0a8b6; --accent:#6f93ff; --ok:#4cc386; --err:#ff7b72; --border:#343a45; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px;
+         background:var(--bg); color:var(--text); font:15px/1.5 "Segoe UI", system-ui, sans-serif; }
+  .card { width:100%; max-width:420px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:28px 24px; }
+  .brand { font-weight:700; letter-spacing:.04em; color:var(--accent); margin-bottom:14px; }
+  h1 { font-size:20px; margin:0 0 10px; }
+  p { margin:0 0 14px; color:var(--muted); }
+  label { display:block; font-size:13px; margin:12px 0 4px; }
+  input { width:100%; padding:10px; font:inherit; color:var(--text); background:var(--bg); border:1px solid var(--border); border-radius:8px; }
+  button { margin-top:18px; width:100%; padding:11px; font:inherit; font-weight:600; color:#fff; background:var(--accent); border:0; border-radius:8px; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:wait; }
+  .msg { margin-top:14px; font-size:14px; }
+  .msg.err { color:var(--err); } .msg.ok { color:var(--ok); }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="brand">PRISMAL</div>
+
+  <section id="reset" class="hidden">
+    <h1>Choisir un nouveau mot de passe</h1>
+    <p id="reset-email"></p>
+    <form id="form">
+      <label for="pw">Nouveau mot de passe (8 caractères minimum)</label>
+      <input id="pw" type="password" autocomplete="new-password" required>
+      <label for="pw2">Confirmer le mot de passe</label>
+      <input id="pw2" type="password" autocomplete="new-password" required>
+      <button id="submit" type="submit">Enregistrer</button>
+    </form>
+    <div id="form-msg" class="msg"></div>
+  </section>
+
+  <section id="info" class="hidden">
+    <h1 id="info-title"></h1>
+    <p id="info-text"></p>
+  </section>
+</main>
+
+<script>
+  // Cle PUBLIQUE (publishable) : faite pour etre utilisee dans une page web
+  var SUPABASE_URL = "https://pbsonzugrweiiiqfgzct.supabase.co";
+  var PUBLISHABLE_KEY = "sb_publishable_dyAuIAfqNdST7raOkRHxjQ_VFcxQr7s";
+
+  function show(id) { document.getElementById(id).classList.remove("hidden"); }
+  function info(title, text) {
+    document.getElementById("info-title").textContent = title;
+    document.getElementById("info-text").textContent = text;
+    document.getElementById("reset").classList.add("hidden");
+    show("info");
+  }
+
+  // Supabase renvoie ici avec les informations dans l'adresse, apres le « # »
+  var params = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
+  // on efface ces informations de la barre d'adresse (le jeton ne doit pas rester visible)
+  if (location.hash || location.search) history.replaceState(null, "", location.pathname);
+
+  var token = params.get("access_token");
+  var type = params.get("type");
+  var error = params.get("error_code") || params.get("error");
+
+  if (error) {
+    if (error === "otp_expired")
+      info("Lien expiré", "Ce lien a expiré ou a déjà été utilisé. Dans Prismal, cliquez à nouveau sur « Mot de passe oublié » pour en recevoir un nouveau.");
+    else
+      info("Lien invalide", "Ce lien n'est pas valide (" + (params.get("error_description") || error).replace(/\+/g, " ") + "). Redemandez-en un depuis Prismal.");
+  } else if (token && type === "recovery") {
+    try {
+      var payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+      if (payload.email) document.getElementById("reset-email").textContent = "Compte : " + payload.email;
+    } catch (e) {}
+    show("reset");
+  } else if (token && (type === "signup" || type === "email_change" || type === "invite")) {
+    info("Adresse email confirmée", "Merci ! Votre adresse est confirmée. Retournez dans Revit, ouvrez Prismal et connectez-vous.");
+  } else {
+    info("Compte Prismal", "Cette page sert à confirmer votre adresse email et à choisir un nouveau mot de passe. Ouvrez-la depuis le lien reçu par email.");
+  }
+
+  document.getElementById("form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var pw = document.getElementById("pw").value, pw2 = document.getElementById("pw2").value;
+    var msg = document.getElementById("form-msg"), btn = document.getElementById("submit");
+    msg.className = "msg err";
+    if (pw.length < 8) { msg.textContent = "Le mot de passe doit contenir au moins 8 caractères."; return; }
+    if (pw !== pw2) { msg.textContent = "Les deux mots de passe ne sont pas identiques."; return; }
+    btn.disabled = true; msg.textContent = "";
+    fetch(SUPABASE_URL + "/auth/v1/user", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "apikey": PUBLISHABLE_KEY, "Authorization": "Bearer " + token },
+      body: JSON.stringify({ password: pw })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (body) { return { ok: r.ok, body: body }; });
+    }).then(function (res) {
+      if (res.ok) {
+        info("Mot de passe modifié", "C'est fait ! Retournez dans Revit, ouvrez Prismal et connectez-vous avec votre nouveau mot de passe.");
+        return;
+      }
+      var code = res.body.error_code || "";
+      msg.textContent =
+        code === "same_password" ? "Le nouveau mot de passe doit être différent de l'ancien." :
+        code === "weak_password" ? "Mot de passe trop faible : utilisez au moins 8 caractères." :
+        code === "session_expired" || code === "bad_jwt" ? "Ce lien a expiré. Redemandez-en un depuis Prismal (« Mot de passe oublié »)." :
+        (res.body.msg || "Une erreur est survenue. Réessayez ou redemandez un lien depuis Prismal.");
+      btn.disabled = false;
+    }).catch(function () {
+      msg.textContent = "Connexion impossible. Vérifiez votre accès à Internet et réessayez.";
+      btn.disabled = false;
+    });
+  });
+</script>
+</body>
+</html>
