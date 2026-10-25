@@ -113,7 +113,26 @@
       <button type="button" data-page="licences">Licences</button>
       <button type="button" data-page="journal">Journal</button>
       <button type="button" data-page="stats">Statistiques</button>
+      <button type="button" data-page="reglages">Réglages</button>
     </nav>
+
+    <!-- Reglages -->
+    <section id="v-reglages" class="card hidden">
+      <h1>Réglages</h1>
+      <h2>Alerte d'expiration des licences</h2>
+      <p>Un email vous est envoyé (à vous seul, jamais aux clients) quand une licence approche de sa fin. Le contrôle a lieu une fois par jour, vers 8 h–9 h (heure de Paris), et chaque délai n'est signalé qu'une fois par licence.</p>
+      <form id="f-reglages">
+        <label class="choice"><input type="checkbox" id="rg-actif">Activer l'alerte par email</label>
+        <label for="rg-delais">Prévenir combien de jours avant la fin ?</label>
+        <input id="rg-delais" type="text" placeholder="30, 7" autocomplete="off">
+        <div class="hint">De 1 à 5 délais en jours, séparés par des virgules. Exemple : « 60, 30, 7 » = un email à 60 jours, un autre à 30 jours, un dernier à 7 jours avant la fin.</div>
+        <div class="actions">
+          <button id="rg-save" class="ok" type="submit">Enregistrer</button>
+          <button id="rg-test" class="ghost" type="button">Envoyer un email de test</button>
+        </div>
+        <div id="rg-msg" class="msg err"></div>
+      </form>
+    </section>
 
     <!-- Liste des licences -->
     <section id="v-licences" class="card hidden">
@@ -446,13 +465,14 @@
     var q = new URLSearchParams(location.search);
     var dem = q.get("demande"), lic = q.get("licence"), page = q.get("page") || "demandes";
     var courant = dem ? "demandes" : lic ? "licences" : page;
-    ["v-list", "v-detail", "v-licences", "v-licence", "v-journal", "v-stats"].forEach(function (v) { show(v, false); });
+    ["v-list", "v-detail", "v-licences", "v-licence", "v-journal", "v-stats", "v-reglages"].forEach(function (v) { show(v, false); });
     Array.prototype.forEach.call($("nav").children, function (b) { b.classList.toggle("on", b.getAttribute("data-page") === courant); });
     if (dem) { show("v-detail"); chargerDemande(dem); }
     else if (lic) { show("v-licence"); chargerLicence(lic); }
     else if (page === "licences") { show("v-licences"); chargerLicences(); }
     else if (page === "journal") { show("v-journal"); chargerJournal(); }
     else if (page === "stats") { show("v-stats"); chargerStats(); }
+    else if (page === "reglages") { show("v-reglages"); chargerReglages(); }
     else { show("v-list"); chargerListe(); }
   }
   $("nav").addEventListener("click", function (e) {
@@ -780,6 +800,7 @@
       case "ajout_collaborateur": return "Collaborateur ajouté : " + (d.email || "") + (d.invitation ? " (invitation, pas encore de compte)" : "");
       case "retrait_collaborateur": return "Collaborateur retiré : " + (d.email || "");
       case "refus": return "Demande refusée" + (d.motif ? " (" + d.motif + ")" : "");
+      case "reglage_alerte": return "Réglage de l'alerte d'expiration : " + (d.actif ? "activée, délais " + (d.delais || []).join(", ") + " jour(s)" : "désactivée");
       case "alerte_expiration": return "Alerte d'expiration envoyée à l'administrateur (seuil " + d.seuil + " jours)";
       default: return h.action;
     }
@@ -982,6 +1003,36 @@
       $("s-versions").textContent = v.length ? v.map(function (k) { return "v" + k + " : " + s.versions[k] + " poste(s)"; }).join("  ·  ") : "Aucun poste enregistré.";
     }).catch(function (e) { erreurDans(grid, e); });
   }
+
+  // ---------- Reglages ----------
+  function chargerReglages() {
+    var msg = $("rg-msg"); msg.className = "msg err"; msg.textContent = "";
+    api("reglages").then(function (r) {
+      $("rg-actif").checked = r.alerte.actif; $("rg-delais").value = (r.alerte.delais || []).join(", ");
+    }).catch(function (e) { if (!siDeconnecte(e)) msg.textContent = e.message; });
+  }
+  $("f-reglages").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var msg = $("rg-msg"); msg.className = "msg err"; msg.textContent = "";
+    var texte = $("rg-delais").value.trim();
+    var delais = texte ? texte.split(/[\s,;]+/).filter(Boolean).map(Number) : [];
+    if (delais.some(function (n) { return !(Number.isInteger(n) && n >= 1 && n <= 365); })) { msg.textContent = "Les délais doivent être des nombres entiers de jours (entre 1 et 365)."; return; }
+    if (delais.length > 5) { msg.textContent = "5 délais au maximum."; return; }
+    if ($("rg-actif").checked && !delais.length) { msg.textContent = "Indiquez au moins un délai, ou désactivez l'alerte."; return; }
+    var btn = $("rg-save"); btn.disabled = true;
+    api("maj_reglages", { alerte: { actif: $("rg-actif").checked, delais: delais } }).then(function (r) {
+      btn.disabled = false; $("rg-delais").value = r.alerte.delais.join(", ");
+      msg.className = "msg ok"; msg.textContent = "Réglages enregistrés ✓";
+    }).catch(function (err) { btn.disabled = false; if (!siDeconnecte(err)) msg.textContent = err.message; });
+  });
+  $("rg-test").addEventListener("click", function () {
+    var msg = $("rg-msg"), btn = $("rg-test"); msg.className = "msg err"; msg.textContent = "";
+    btn.disabled = true;
+    api("alerte_test").then(function () {
+      btn.disabled = false; msg.className = "msg ok";
+      msg.textContent = "Email de test envoyé à votre adresse d'administrateur (il utilise les derniers réglages enregistrés).";
+    }).catch(function (err) { btn.disabled = false; if (!siDeconnecte(err)) msg.textContent = err.message; });
+  });
 
   demarrer();
 </script>
