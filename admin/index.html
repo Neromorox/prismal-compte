@@ -405,9 +405,33 @@
         el("div", {}, [el("div", { text: l.cle }), el("div", { class: "hint", style: "font-family:inherit", text: detail })]),
         boutonCopier(l.cle)
       ]));
+      keys.appendChild(blocPostes(l));
     });
     box.appendChild(keys);
     if (licences.length > 1) box.appendChild(boutonCopier(licences.map(function (l) { return l.cle; }).join("\n"), "Copier toutes les clés"));
+    return box;
+  }
+
+  // Postes (ordinateurs) enregistres sur une licence : une place reste prise tant qu'on ne la libere pas
+  function blocPostes(l) {
+    var postes = l.activations || [];
+    var box = el("div", { class: "hint", style: "font-family:inherit;margin:4px 0 12px 12px" });
+    box.appendChild(el("div", { text: "Postes enregistrés : " + postes.length + " / " + l.postes_max }));
+    postes.forEach(function (a) {
+      var b = el("button", { class: "ghost small", type: "button", text: "Libérer" });
+      b.addEventListener("click", function () {
+        if (!confirm("Libérer le poste " + a.poste + " (session " + a.utilisateur + ") ?\n\nSa place redeviendra disponible. Le poste garde son accès jusqu'à son prochain renouvellement de licence (démarrage de Revit en ligne).")) return;
+        b.disabled = true;
+        api("liberer", { id: a.id }).then(function () {
+          if (courante && courante.demande) chargerDemande(courante.demande.id);
+        }).catch(function (e) { b.disabled = false; if (!siDeconnecte(e)) alert(e.message); });
+      });
+      box.appendChild(el("div", { style: "display:flex;gap:8px;align-items:center;margin-top:4px" }, [
+        el("span", { text: a.poste + " (session " + a.utilisateur + ") · dernière connexion " + frDateHeure(a.derniere_connexion)
+          + (a.version_prismal ? " · v" + a.version_prismal : "") }),
+        b
+      ]));
+    });
     return box;
   }
 
@@ -496,7 +520,7 @@
     var mode = valeurRadio("mode");
     $("t-mode-txt").textContent = postes <= 1 ? "Une clé, un poste." :
       mode === "par_poste" ? postes + " clés d'un poste chacune. Le demandeur utilise la première ; les collaborateurs reçoivent les suivantes." :
-      "Une seule clé, utilisable sur " + postes + " postes en même temps. Le demandeur et les collaborateurs partagent cette clé.";
+      "Une seule clé, utilisable sur " + postes + " ordinateurs au maximum (chaque ordinateur utilisé garde sa place jusqu'à ce que vous la libériez). Le demandeur et les collaborateurs partagent cette clé.";
   }
 
   function initFormulaire() {
