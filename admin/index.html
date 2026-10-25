@@ -80,6 +80,7 @@
       <input id="l-pw" type="password" autocomplete="current-password" required>
       <button id="l-btn" class="full" type="submit">Se connecter</button>
     </form>
+    <p style="margin:12px 0 0;text-align:center"><a href="#" id="l-forgot" style="color:var(--accent);font-size:14px">Mot de passe oublié ?</a></p>
     <div id="l-msg" class="msg err"></div>
   </section>
 
@@ -331,6 +332,27 @@
       sessionMemoire = res.body; ecrireSession(res.body); $("l-pw").value = "";
       demarrer();
     }).catch(function () { btn.disabled = false; $("l-msg").textContent = "Connexion impossible. Vérifiez votre accès à Internet."; });
+  });
+
+  // Mot de passe oublie : Supabase envoie un email dont le lien mene a la page compte (choix du nouveau mot de passe)
+  $("l-forgot").addEventListener("click", function (e) {
+    e.preventDefault();
+    var msg = $("l-msg"), email = $("l-email").value.trim();
+    msg.className = "msg err";
+    if (!email) { msg.textContent = "Saisissez d'abord votre email ci-dessus, puis cliquez à nouveau sur « Mot de passe oublié ? »."; $("l-email").focus(); return; }
+    msg.textContent = "Envoi…";
+    fetch(SUPABASE_URL + "/auth/v1/recover", {
+      method: "POST", headers: { "Content-Type": "application/json", "apikey": PUBLISHABLE_KEY }, body: JSON.stringify({ email: email })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (b) {
+        if (r.ok) {
+          msg.className = "msg ok";
+          msg.textContent = "Si cette adresse correspond à un compte, un email vient de vous être envoyé. Cliquez sur son lien pour choisir un nouveau mot de passe, puis revenez vous connecter ici.";
+        } else {
+          msg.textContent = r.status === 429 ? "Trop de demandes. Patientez quelques minutes avant de réessayer." : (b.msg || "Envoi impossible. Réessayez plus tard.");
+        }
+      });
+    }).catch(function () { msg.textContent = "Connexion impossible. Vérifiez votre accès à Internet."; });
   });
 
   $("logout").addEventListener("click", function () {
