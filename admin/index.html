@@ -341,7 +341,8 @@
     msg.className = "msg err";
     if (!email) { msg.textContent = "Saisissez d'abord votre email ci-dessus, puis cliquez à nouveau sur « Mot de passe oublié ? »."; $("l-email").focus(); return; }
     msg.textContent = "Envoi…";
-    fetch(SUPABASE_URL + "/auth/v1/recover", {
+    // redirect_to explicite : sinon Supabase renvoie vers l'origine de la page (neromorox.github.io/), ou il n'y a rien
+    fetch(SUPABASE_URL + "/auth/v1/recover?redirect_to=" + encodeURIComponent(new URL("../", location.href).href), {
       method: "POST", headers: { "Content-Type": "application/json", "apikey": PUBLISHABLE_KEY }, body: JSON.stringify({ email: email })
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (b) {
