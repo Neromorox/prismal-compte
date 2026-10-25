@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Prismal Administration</title>
+<style>
+  :root { --bg:#f4f5f7; --card:#fff; --text:#1d2330; --muted:#5b6475; --accent:#2f5bd3; --ok:#1e7a46; --err:#b42318; --warn:#9a6700;
+          --border:#d5d9e0; --soft:#eef1f6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171c; --card:#1d2128; --text:#e8eaee; --muted:#a0a8b6; --accent:#6f93ff; --ok:#4cc386; --err:#ff7b72; --warn:#e3b341;
+            --border:#343a45; --soft:#262b34; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; padding:16px; background:var(--bg); color:var(--text); font:15px/1.5 "Segoe UI", system-ui, sans-serif; }
+  .wrap { max-width:880px; margin:0 auto; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px 22px; margin-bottom:16px; }
+  .narrow { max-width:420px; margin:10vh auto 0; }
+  .brand { font-weight:700; letter-spacing:.04em; color:var(--accent); }
+  header { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  header .who { color:var(--muted); font-size:13px; }
+  h1 { font-size:20px; margin:0 0 10px; }
+  h2 { font-size:16px; margin:0 0 12px; }
+  p { margin:0 0 12px; color:var(--muted); }
+  label { display:block; font-size:13px; margin:12px 0 4px; }
+  input, select, textarea { width:100%; padding:9px 10px; font:inherit; color:var(--text); background:var(--bg); border:1px solid var(--border); border-radius:8px; }
+  textarea { min-height:70px; resize:vertical; }
+  input[type=checkbox], input[type=radio] { width:auto; margin:0 6px 0 0; }
+  .choice { display:flex; align-items:center; margin:6px 0; font-size:14px; cursor:pointer; }
+  button { padding:10px 16px; font:inherit; font-weight:600; color:#fff; background:var(--accent); border:0; border-radius:8px; cursor:pointer; }
+  button.ok { background:var(--ok); } button.danger { background:var(--err); }
+  button.ghost { background:transparent; color:var(--accent); border:1px solid var(--border); }
+  button.small { padding:5px 10px; font-size:13px; }
+  button:disabled { opacity:.6; cursor:wait; }
+  .full { width:100%; margin-top:18px; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
+  @media (max-width:600px) { .row { grid-template-columns:1fr; } }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:20px; }
+  .msg { margin-top:12px; font-size:14px; }
+  .msg.err { color:var(--err); } .msg.ok { color:var(--ok); }
+  .hint { font-size:13px; color:var(--muted); margin-top:4px; }
+  .hidden { display:none !important; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .tabs button { background:transparent; color:var(--muted); border:1px solid var(--border); padding:6px 12px; font-size:13px; }
+  .tabs button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .list { display:flex; flex-direction:column; gap:8px; }
+  .item { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--border);
+          border-radius:10px; cursor:pointer; background:var(--card); text-align:left; color:var(--text); font-weight:400; width:100%; }
+  .item:hover { border-color:var(--accent); }
+  .item .sub { color:var(--muted); font-size:13px; }
+  .badge { font-size:12px; font-weight:600; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+  .badge.en_attente { background:var(--soft); color:var(--warn); }
+  .badge.validee { background:var(--soft); color:var(--ok); }
+  .badge.refusee { background:var(--soft); color:var(--err); }
+  table.info { border-collapse:collapse; font-size:14px; width:100%; }
+  table.info td { padding:4px 12px 4px 0; vertical-align:top; }
+  table.info td:first-child { color:var(--muted); width:38%; }
+  .keys { display:flex; flex-direction:column; gap:6px; margin:10px 0; }
+  .key { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; background:var(--soft); border-radius:8px;
+         font-family:Consolas, "Courier New", monospace; font-size:15px; }
+  .computed { font-size:13px; color:var(--ok); margin-top:4px; }
+  .empty { color:var(--muted); font-style:italic; }
+  fieldset { border:0; padding:0; margin:0; }
+  legend { font-size:13px; margin:12px 0 4px; padding:0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Connexion -->
+  <section id="v-login" class="card narrow hidden">
+    <div class="brand">PRISMAL</div>
+    <h1>Administration</h1>
+    <p>Connectez-vous avec votre compte Prismal administrateur.</p>
+    <form id="f-login">
+      <label for="l-email">Email</label>
+      <input id="l-email" type="email" autocomplete="username" required>
+      <label for="l-pw">Mot de passe</label>
+      <input id="l-pw" type="password" autocomplete="current-password" required>
+      <button id="l-btn" class="full" type="submit">Se connecter</button>
+    </form>
+    <div id="l-msg" class="msg err"></div>
+  </section>
+
+  <!-- Application -->
+  <div id="v-app" class="hidden">
+    <header>
+      <div><span class="brand">PRISMAL</span> <span style="color:var(--muted)">· Administration</span></div>
+      <div><span id="who" class="who"></span> <button id="logout" class="ghost small" type="button">Déconnexion</button></div>
+    </header>
+
+    <!-- Liste des demandes -->
+    <section id="v-list" class="card hidden">
+      <h1>Demandes d'activation</h1>
+      <div class="tabs" id="tabs">
+        <button type="button" data-s="en_attente" class="on">En attente</button>
+        <button type="button" data-s="validee">Validées</button>
+        <button type="button" data-s="refusee">Refusées</button>
+        <button type="button" data-s="toutes">Toutes</button>
+      </div>
+      <div id="list" class="list"></div>
+    </section>
+
+    <!-- Detail d'une demande -->
+    <div id="v-detail" class="hidden">
+      <p><button id="back" class="ghost small" type="button">← Toutes les demandes</button></p>
+
+      <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <h1 id="d-title" style="margin:0"></h1><span id="d-badge" class="badge"></span>
+        </div>
+        <p id="d-date" style="margin-top:6px"></p>
+        <table class="info" id="d-info"></table>
+        <div id="d-existing"></div>
+      </section>
+
+      <!-- Formulaire de traitement -->
+      <section class="card" id="d-form-card">
+        <h2>Traiter la demande</h2>
+        <form id="f-treat">
+          <div class="row">
+            <fieldset>
+              <legend>Type</legend>
+              <label class="choice"><input type="radio" name="type" value="payante" checked>Payante</label>
+              <label class="choice"><input type="radio" name="type" value="essai">Essai gratuit</label>
+            </fieldset>
+            <fieldset>
+              <legend>Outils inclus</legend>
+              <label class="choice"><input type="checkbox" name="outils" value="cotation" checked>Cotation Auto</label>
+              <label class="choice"><input type="checkbox" name="outils" value="plansvente" checked>Plans de vente</label>
+            </fieldset>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="t-debut">Début</label>
+              <input id="t-debut" type="date" required>
+            </div>
+            <div>
+              <label for="t-duree">Durée</label>
+              <select id="t-duree">
+                <option value="1">1 mois</option>
+                <option value="3">3 mois</option>
+                <option value="6">6 mois</option>
+                <option value="12" selected>1 an</option>
+                <option value="24">2 ans</option>
+                <option value="perso">Date de fin choisie…</option>
+              </select>
+              <input id="t-fin" type="date" class="hidden" style="margin-top:6px">
+              <div id="t-fin-txt" class="computed"></div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="t-postes">Nombre de postes</label>
+              <input id="t-postes" type="number" min="1" max="1000" value="1" required>
+            </div>
+            <fieldset id="t-mode-box">
+              <legend>Répartition</legend>
+              <label class="choice"><input type="radio" name="mode" value="partagee" checked>Une clé partagée pour tous les postes</label>
+              <label class="choice"><input type="radio" name="mode" value="par_poste">Une clé par poste</label>
+            </fieldset>
+          </div>
+          <div id="t-mode-txt" class="hint"></div>
+
+          <label for="t-collab">Collaborateurs à rattacher (un email par ligne, facultatif)</label>
+          <textarea id="t-collab" placeholder="prenom.nom@societe.fr"></textarea>
+          <div class="hint">Un collaborateur qui n'a pas encore de compte sera rattaché automatiquement à sa première connexion.</div>
+
+          <div class="row">
+            <div>
+              <label for="t-ref">Référence de paiement / facture</label>
+              <input id="t-ref" type="text">
+            </div>
+            <div>
+              <label for="t-montant">Montant (€)</label>
+              <input id="t-montant" type="number" min="0" step="0.01">
+            </div>
+          </div>
+
+          <label for="t-note">Note interne</label>
+          <textarea id="t-note"></textarea>
+
+          <div class="actions">
+            <button id="t-ok" class="ok" type="submit">Valider et créer la licence</button>
+            <button id="t-refuse" class="danger" type="button">Refuser…</button>
+          </div>
+          <div id="t-msg" class="msg err"></div>
+        </form>
+
+        <div id="refuse-box" class="hidden">
+          <label for="r-motif">Motif du refus (interne)</label>
+          <textarea id="r-motif" placeholder="ex. paiement non reçu"></textarea>
+          <div class="actions">
+            <button id="r-ok" class="danger" type="button">Confirmer le refus</button>
+            <button id="r-cancel" class="ghost" type="button">Annuler</button>
+          </div>
+          <div id="r-msg" class="msg err"></div>
+        </div>
+      </section>
+
+      <!-- Resultat / demande deja traitee -->
+      <section class="card hidden" id="d-result"></section>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Cle PUBLIQUE (publishable) : faite pour etre utilisee dans une page web
+  var SUPABASE_URL = "https://pbsonzugrweiiiqfgzct.supabase.co";
+  var PUBLISHABLE_KEY = "sb_publishable_dyAuIAfqNdST7raOkRHxjQ_VFcxQr7s";
+  var SESSION_KEY = "prismal_admin_session";
+  var OUTILS = { cotation: "Cotation Auto", plansvente: "Plans de vente" };
+
+  var $ = function (id) { return document.getElementById(id); };
+  function show(id, on) { $(id).classList.toggle("hidden", on === false); }
+  function el(tag, attrs, children) {
+    var e = document.createElement(tag);
+    for (var k in attrs || {}) {
+      if (k === "text") e.textContent = attrs[k];
+      else if (k === "class") e.className = attrs[k];
+      else if (k.slice(0, 2) === "on") e.addEventListener(k.slice(2), attrs[k]);
+      else e.setAttribute(k, attrs[k]);
+    }
+    (children || []).forEach(function (c) { if (c) e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function frDate(iso) { if (!iso) return ""; var d = new Date(iso.length === 10 ? iso + "T00:00:00" : iso); return d.toLocaleDateString("fr-FR"); }
+  function frDateHeure(iso) { return iso ? new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : ""; }
+  function isoJour(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function nomClient(p, email) {
+    var n = p ? ((p.prenom || "") + " " + (p.nom || "")).trim() : "";
+    return n || email || (p && p.email) || "Client";
+  }
+  var STATUTS = { en_attente: "En attente", validee: "Validée", refusee: "Refusée" };
+
+  // ---------- Session (jeton de connexion Supabase, garde dans ce navigateur) ----------
+  function lireSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (e) { return null; } }
+  function ecrireSession(s) {
+    try {
+      if (s) localStorage.setItem(SESSION_KEY, JSON.stringify({ access_token: s.access_token, refresh_token: s.refresh_token,
+        expires_at: s.expires_at || (Math.floor(Date.now() / 1000) + (s.expires_in || 3600)) }));
+      else localStorage.removeItem(SESSION_KEY);
+    } catch (e) {}
+  }
+  var sessionMemoire = null;
+  function session() { return sessionMemoire || lireSession(); }
+
+  function auth(grant, body) {
+    return fetch(SUPABASE_URL + "/auth/v1/token?grant_type=" + grant, {
+      method: "POST", headers: { "Content-Type": "application/json", "apikey": PUBLISHABLE_KEY }, body: JSON.stringify(body)
+    }).then(function (r) { return r.json().then(function (b) { return { ok: r.ok, body: b }; }); });
+  }
+
+  function jetonValide() {
+    var s = session();
+    if (!s) return Promise.resolve(null);
+    if (s.expires_at - 60 > Date.now() / 1000) return Promise.resolve(s.access_token);
+    return auth("refresh_token", { refresh_token: s.refresh_token }).then(function (res) {
+      if (!res.ok) { sessionMemoire = null; ecrireSession(null); return null; }
+      sessionMemoire = res.body; ecrireSession(res.body);
+      return res.body.access_token;
+    });
+  }
+
+  // Appel de la fonction serveur "admin"
+  function api(action, data) {
+    return jetonValide().then(function (jeton) {
+      if (!jeton) { throw { code: "non_connecte" }; }
+      var body = Object.assign({ action: action }, data || {});
+      return fetch(SUPABASE_URL + "/functions/v1/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": PUBLISHABLE_KEY, "Authorization": "Bearer " + jeton },
+        body: JSON.stringify(body)
+      });
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (b) {
+        if (!r.ok) throw { code: b.erreur || "serveur", message: b.message || "Erreur du serveur (" + r.status + ")." };
+        return b;
+      });
+    }, function (e) {
+      if (e && e.code) throw e;
+      throw { code: "reseau", message: "Connexion impossible. Vérifiez votre accès à Internet." };
+    });
+  }
+  function siDeconnecte(e) {
+    if (e && (e.code === "non_connecte" || e.code === "interdit")) {
+      if (e.code === "interdit") $("l-msg").textContent = "Ce compte n'est pas administrateur.";
+      sessionMemoire = null; ecrireSession(null); afficherLogin(); return true;
+    }
+    return false;
+  }
+
+  // ---------- Navigation ----------
+  function demandeDansAdresse() { return new URLSearchParams(location.search).get("demande"); }
+  function allerA(demandeId) {
+    history.pushState(null, "", location.pathname + (demandeId ? "?demande=" + encodeURIComponent(demandeId) : ""));
+    route();
+  }
+  window.addEventListener("popstate", route);
+
+  function afficherLogin() { show("v-app", false); show("v-login", true); $("l-email").focus(); }
+
+  function demarrer() {
+    if (!session()) { afficherLogin(); return; }
+    api("moi").then(function (r) {
+      $("who").textContent = r.email;
+      show("v-login", false); show("v-app", true);
+      route();
+    }).catch(function (e) { if (!siDeconnecte(e)) { afficherLogin(); $("l-msg").textContent = e.message; } });
+  }
+
+  function route() {
+    var id = demandeDansAdresse();
+    show("v-list", !id); show("v-detail", !!id);
+    if (id) chargerDemande(id); else chargerListe();
+  }
+
+  $("f-login").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var btn = $("l-btn"); btn.disabled = true; $("l-msg").textContent = "";
+    auth("password", { email: $("l-email").value.trim(), password: $("l-pw").value }).then(function (res) {
+      btn.disabled = false;
+      if (!res.ok) {
+        $("l-msg").textContent = res.body.error_code === "invalid_credentials" ? "Email ou mot de passe incorrect."
+          : (res.body.msg || res.body.error_description || "Connexion refusée.");
+        return;
+      }
+      sessionMemoire = res.body; ecrireSession(res.body); $("l-pw").value = "";
+      demarrer();
+    }).catch(function () { btn.disabled = false; $("l-msg").textContent = "Connexion impossible. Vérifiez votre accès à Internet."; });
+  });
+
+  $("logout").addEventListener("click", function () {
+    var s = session();
+    if (s) fetch(SUPABASE_URL + "/auth/v1/logout", { method: "POST", headers: { "apikey": PUBLISHABLE_KEY, "Authorization": "Bearer " + s.access_token } }).catch(function () {});
+    sessionMemoire = null; ecrireSession(null); $("l-msg").textContent = ""; afficherLogin();
+  });
+  $("back").addEventListener("click", function () { allerA(null); });
+
+  // ---------- Liste ----------
+  var filtre = "en_attente";
+  $("tabs").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    filtre = b.getAttribute("data-s");
+    Array.prototype.forEach.call($("tabs").children, function (x) { x.classList.toggle("on", x === b); });
+    chargerListe();
+  });
+
+  function chargerListe() {
+    var list = $("list"); list.replaceChildren(el("p", { class: "empty", text: "Chargement…" }));
+    api("demandes", { statut: filtre }).then(function (r) {
+      list.replaceChildren();
+      if (!r.demandes.length) { list.appendChild(el("p", { class: "empty", text: "Aucune demande." })); return; }
+      r.demandes.forEach(function (d) {
+        var p = d.profil || {};
+        list.appendChild(el("button", { class: "item", type: "button", onclick: function () { allerA(d.id); } }, [
+          el("div", {}, [
+            el("div", { text: nomClient(p) + (p.societe ? " · " + p.societe : "") }),
+            el("div", { class: "sub", text: (p.email || "") + " · demandée le " + frDateHeure(d.cree_le) })
+          ]),
+          el("span", { class: "badge " + d.statut, text: STATUTS[d.statut] || d.statut })
+        ]));
+      });
+    }).catch(function (e) { if (!siDeconnecte(e)) list.replaceChildren(el("p", { class: "msg err", text: e.message })); });
+  }
+
+  // ---------- Detail ----------
+  var courante = null;
+
+  function ligne(k, v) { return el("tr", {}, [el("td", { text: k }), el("td", { text: v || "—" })]); }
+
+  function blocLicences(titre, licences) {
+    var box = el("div", { style: "margin-top:16px" }, [el("h2", { text: titre })]);
+    var keys = el("div", { class: "keys" });
+    licences.forEach(function (l) {
+      var detail = (l.outils || []).map(function (o) { return OUTILS[o] || o; }).join(", ") + " · " + l.postes_max + " poste(s) · "
+        + (l.type === "essai" ? "essai · " : "") + "du " + frDate(l.debut) + " au " + frDate(l.fin) + (l.statut !== "active" ? " · " + l.statut : "");
+      keys.appendChild(el("div", { class: "key" }, [
+        el("div", {}, [el("div", { text: l.cle }), el("div", { class: "hint", style: "font-family:inherit", text: detail })]),
+        boutonCopier(l.cle)
+      ]));
+    });
+    box.appendChild(keys);
+    if (licences.length > 1) box.appendChild(boutonCopier(licences.map(function (l) { return l.cle; }).join("\n"), "Copier toutes les clés"));
+    return box;
+  }
+
+  function boutonCopier(texte, libelle) {
+    var b = el("button", { class: "ghost small", type: "button", text: libelle || "Copier" });
+    b.addEventListener("click", function () {
+      navigator.clipboard.writeText(texte).then(function () {
+        var t = b.textContent; b.textContent = "Copié ✓"; setTimeout(function () { b.textContent = t; }, 1500);
+      });
+    });
+    return b;
+  }
+
+  function chargerDemande(id) {
+    $("d-title").textContent = "Chargement…"; $("d-badge").textContent = ""; $("d-info").replaceChildren(); $("d-existing").replaceChildren();
+    show("d-form-card", false); show("d-result", false);
+    api("demande", { id: id }).then(function (r) {
+      courante = r;
+      var d = r.demande, p = r.profil || {};
+      $("d-title").textContent = nomClient(p, r.email);
+      $("d-badge").className = "badge " + d.statut; $("d-badge").textContent = STATUTS[d.statut] || d.statut;
+      $("d-date").textContent = "Demande du " + frDateHeure(d.cree_le) + (d.traite_le ? " · traitée le " + frDateHeure(d.traite_le) : "");
+      var adresse = [p.adresse_rue, ((p.adresse_cp || "") + " " + (p.adresse_ville || "")).trim(), p.adresse_pays].filter(Boolean).join(", ");
+      var envoi = p.envoi_different ? [p.envoi_rue, ((p.envoi_cp || "") + " " + (p.envoi_ville || "")).trim(), p.envoi_pays].filter(Boolean).join(", ")
+        : "identique à la facturation";
+      $("d-info").replaceChildren(
+        ligne("Email", r.email), ligne("Nom", ((p.civilite || "") + " " + (p.prenom || "") + " " + (p.nom || "")).trim()),
+        ligne("Société", p.societe), ligne("Fonction", p.fonction), ligne("Téléphone", p.telephone),
+        ligne("Adresse de facturation", adresse), ligne("Envoi des factures", envoi),
+        ligne("SIRET", p.siret), ligne("TVA intracommunautaire", p.tva),
+        ligne("CGU / RGPD acceptées le", p.cgu_accepte_le ? frDateHeure(p.cgu_accepte_le) : "non"),
+        ligne("Compte créé le", frDateHeure(p.cree_le))
+      );
+      var autres = (r.licences_compte || []).filter(function (l) { return l.demande_id !== d.id; });
+      if (autres.length) $("d-existing").appendChild(blocLicences("Licences déjà rattachées à ce compte", autres));
+
+      if (d.statut === "en_attente") { initFormulaire(); show("d-form-card", true); }
+      else afficherTraitee(r);
+    }).catch(function (e) {
+      if (!siDeconnecte(e)) { $("d-title").textContent = "Demande introuvable"; $("d-date").textContent = e.message; }
+    });
+  }
+
+  function afficherTraitee(r) {
+    var d = r.demande, box = $("d-result"); box.replaceChildren();
+    if (d.statut === "validee") {
+      box.appendChild(el("h2", { text: "Licence créée" }));
+      if (r.licences_creees.length) box.appendChild(blocLicences(r.licences_creees.length > 1 ? "Clés de la commande" : "Clé", r.licences_creees));
+      var t = el("table", { class: "info", style: "margin-top:10px" });
+      if (d.reference_paiement) t.appendChild(ligne("Référence de paiement", d.reference_paiement));
+      if (d.montant != null) t.appendChild(ligne("Montant", Number(d.montant).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })));
+      if (d.note) t.appendChild(ligne("Note interne", d.note));
+      if (t.children.length) box.appendChild(t);
+    } else {
+      box.appendChild(el("h2", { text: "Demande refusée" }));
+      box.appendChild(el("p", { text: d.motif_refus ? "Motif : " + d.motif_refus : "Aucun motif indiqué." }));
+    }
+    show("d-result", true);
+  }
+
+  // ---------- Formulaire ----------
+  function valeurRadio(nom) { var x = document.querySelector("input[name=" + nom + "]:checked"); return x ? x.value : null; }
+
+  function finCalculee() {
+    var duree = $("t-duree").value;
+    if (duree === "perso") return $("t-fin").value || null;
+    var debut = $("t-debut").value; if (!debut) return null;
+    var d = new Date(debut + "T00:00:00"), jour = d.getDate();
+    d.setMonth(d.getMonth() + parseInt(duree, 10));
+    if (d.getDate() !== jour) d.setDate(0); // ex. 31 janvier + 1 mois -> 28/29 fevrier
+    return isoJour(d);
+  }
+
+  function collaborateurs() {
+    return $("t-collab").value.split(/[\s,;]+/).map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean);
+  }
+
+  function majFormulaire() {
+    var perso = $("t-duree").value === "perso";
+    show("t-fin", perso);
+    var fin = finCalculee();
+    $("t-fin-txt").textContent = fin ? "Fin de l'abonnement : " + frDate(fin) : "";
+    var postes = parseInt($("t-postes").value, 10) || 1;
+    show("t-mode-box", postes > 1);
+    if (postes <= 1) document.querySelector("input[name=mode][value=partagee]").checked = true;
+    var mode = valeurRadio("mode");
+    $("t-mode-txt").textContent = postes <= 1 ? "Une clé, un poste." :
+      mode === "par_poste" ? postes + " clés d'un poste chacune. Le demandeur utilise la première ; les collaborateurs reçoivent les suivantes." :
+      "Une seule clé, utilisable sur " + postes + " postes en même temps. Le demandeur et les collaborateurs partagent cette clé.";
+  }
+
+  function initFormulaire() {
+    $("f-treat").reset();
+    $("t-debut").value = isoJour(new Date());
+    $("t-fin").value = "";
+    $("t-msg").textContent = ""; $("r-msg").textContent = ""; $("r-motif").value = "";
+    show("f-treat", true); show("refuse-box", false);
+    majFormulaire();
+  }
+
+  ["t-duree", "t-debut", "t-fin", "t-postes"].forEach(function (id) { $(id).addEventListener("input", majFormulaire); $(id).addEventListener("change", majFormulaire); });
+  document.querySelectorAll("input[name=mode]").forEach(function (x) { x.addEventListener("change", majFormulaire); });
+  // Un essai dure en general moins longtemps : on propose 1 mois
+  document.querySelectorAll("input[name=type]").forEach(function (x) {
+    x.addEventListener("change", function () {
+      if (valeurRadio("type") === "essai" && $("t-duree").value === "12") $("t-duree").value = "1";
+      majFormulaire();
+    });
+  });
+
+  $("f-treat").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var msg = $("t-msg"); msg.className = "msg err"; msg.textContent = "";
+    var outils = Array.prototype.map.call(document.querySelectorAll("input[name=outils]:checked"), function (x) { return x.value; });
+    var postes = parseInt($("t-postes").value, 10), debut = $("t-debut").value, fin = finCalculee(), mode = valeurRadio("mode");
+    var collab = collaborateurs();
+    var mauvais = collab.filter(function (x) { return !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x); });
+    if (!outils.length) { msg.textContent = "Choisissez au moins un outil."; return; }
+    if (!(postes >= 1 && postes <= 1000)) { msg.textContent = "Le nombre de postes doit être entre 1 et 1000."; return; }
+    if (!debut || !fin) { msg.textContent = "Indiquez la date de début et la date de fin."; return; }
+    if (fin < debut) { msg.textContent = "La date de fin doit être après la date de début."; return; }
+    if (mauvais.length) { msg.textContent = "Email(s) invalide(s) : " + mauvais.join(", "); return; }
+    if (mode === "par_poste" && collab.length > postes - 1) {
+      msg.textContent = "Trop de collaborateurs : " + (postes - 1) + " clé(s) disponible(s) après celle du demandeur."; return;
+    }
+
+    var resume = postes + " poste(s), " + (mode === "par_poste" && postes > 1 ? postes + " clés" : "1 clé") + ", du " + frDate(debut) + " au " + frDate(fin)
+      + (valeurRadio("type") === "essai" ? " (essai)" : "");
+    if (!confirm("Créer la licence ?\n\n" + resume)) return;
+
+    var btn = $("t-ok"); btn.disabled = true;
+    api("traiter", { id: courante.demande.id, options: {
+      type: valeurRadio("type"), outils: outils, debut: debut, fin: fin, postes: postes, mode: mode,
+      collaborateurs: collab, reference: $("t-ref").value, montant: $("t-montant").value, note: $("t-note").value
+    } }).then(function (r) {
+      btn.disabled = false;
+      show("d-form-card", false);
+      var box = $("d-result"); box.replaceChildren(el("h2", { text: "Licence créée ✓" }));
+      box.appendChild(el("p", { text: "Pour " + (r.email || "") + ", du " + frDate(r.debut) + " au " + frDate(r.fin) + "." }));
+      var keys = el("div", { class: "keys" });
+      r.cles.forEach(function (k, i) {
+        keys.appendChild(el("div", { class: "key" }, [el("span", { text: k + (i === 0 ? "   (demandeur)" : "") }), boutonCopier(k)]));
+      });
+      box.appendChild(keys);
+      if (r.cles.length > 1) box.appendChild(boutonCopier(r.cles.join("\n"), "Copier toutes les clés"));
+      if (r.rattaches.length) box.appendChild(el("p", { style: "margin-top:12px", text: "Collaborateurs rattachés : " + r.rattaches.join(", ") }));
+      if (r.invites.length) box.appendChild(el("p", { text: "Invités (rattachés à leur première connexion) : " + r.invites.join(", ") }));
+      box.appendChild(el("p", { style: "margin-top:12px", text: "Le client doit cliquer sur « Actualiser » dans la fenêtre Connexion de Prismal." }));
+      $("d-badge").className = "badge validee"; $("d-badge").textContent = STATUTS.validee;
+      show("d-result", true);
+    }).catch(function (e) { btn.disabled = false; if (!siDeconnecte(e)) msg.textContent = e.message; });
+  });
+
+  $("t-refuse").addEventListener("click", function () { show("f-treat", false); show("refuse-box", true); $("r-motif").focus(); });
+  $("r-cancel").addEventListener("click", function () { show("refuse-box", false); show("f-treat", true); });
+  $("r-ok").addEventListener("click", function () {
+    var btn = $("r-ok"); btn.disabled = true; $("r-msg").textContent = "";
+    api("refuser", { id: courante.demande.id, motif: $("r-motif").value }).then(function () {
+      btn.disabled = false; chargerDemande(courante.demande.id);
+    }).catch(function (e) { btn.disabled = false; if (!siDeconnecte(e)) $("r-msg").textContent = e.message; });
+  });
+
+  demarrer();
+</script>
+</body>
+</html>
