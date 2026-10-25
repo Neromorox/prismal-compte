@@ -58,6 +58,19 @@
   .msg.err { color:var(--err); } .msg.ok { color:var(--ok); }
   .hint { font-size:13px; color:var(--muted); margin-top:4px; }
   .hidden { display:none !important; }
+  .badge.nouveau { background:var(--soft); color:var(--accent); }
+  .badge.en_cours { background:var(--soft); color:var(--warn); }
+  .badge.traite { background:var(--soft); color:var(--ok); }
+  .badge.archive { background:var(--soft); color:var(--muted); }
+  .ct { border:1px solid var(--border); border-radius:10px; background:var(--card); }
+  .ct > summary { list-style:none; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 14px; }
+  .ct > summary::-webkit-details-marker { display:none; }
+  .ct[open] { border-color:var(--accent); }
+  .ct .sub { color:var(--muted); font-size:13px; }
+  .ct .corps { padding:4px 16px 16px; border-top:1px solid var(--border); }
+  .ct .msgtxt { white-space:pre-wrap; background:var(--soft); border-radius:8px; padding:10px 12px; font-size:14px; margin:6px 0 10px; }
+  .ct .ligne { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-top:10px; }
+  .ct .ligne > div { flex:1; min-width:180px; }
   .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
   .tabs button { background:transparent; color:var(--muted); border:1px solid var(--border); padding:6px 12px; font-size:13px; }
   .tabs button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
@@ -111,6 +124,7 @@
     <nav class="nav" id="nav">
       <button type="button" data-page="demandes">Demandes</button>
       <button type="button" data-page="licences">Licences</button>
+      <button type="button" data-page="contacts">Renseignements</button>
       <button type="button" data-page="journal">Journal</button>
       <button type="button" data-page="stats">Statistiques</button>
       <button type="button" data-page="reglages">Réglages</button>
@@ -232,6 +246,25 @@
     </section>
 
     <!-- Statistiques -->
+    <!-- Demandes de renseignements (formulaire de la landing page) -->
+    <section id="v-contacts" class="card hidden">
+      <h1>Demandes de renseignements</h1>
+      <p>Envoyées depuis le formulaire de contact de la page de présentation de Prismal.</p>
+      <div class="tools">
+        <input id="ct-q" type="search" placeholder="Rechercher (nom, email, société, message…)">
+        <select id="ct-f">
+          <option value="">Tous les statuts</option>
+          <option value="nouveau">Nouveau</option>
+          <option value="en_cours">En cours</option>
+          <option value="traite">Traité</option>
+          <option value="archive">Archivé</option>
+        </select>
+        <button id="ct-csv" class="ghost small" type="button">Exporter CSV</button>
+      </div>
+      <div id="ct-count" class="hint" style="margin:0 0 10px"></div>
+      <div id="ct-list" class="list"></div>
+    </section>
+
     <section id="v-stats" class="card hidden">
       <h1>Statistiques</h1>
       <div id="s-grid" class="stats"></div>
@@ -473,11 +506,12 @@
     var q = new URLSearchParams(location.search);
     var dem = q.get("demande"), lic = q.get("licence"), page = q.get("page") || "demandes";
     var courant = dem ? "demandes" : lic ? "licences" : page;
-    ["v-list", "v-detail", "v-licences", "v-licence", "v-journal", "v-stats", "v-reglages"].forEach(function (v) { show(v, false); });
+    ["v-list", "v-detail", "v-licences", "v-licence", "v-journal", "v-contacts", "v-stats", "v-reglages"].forEach(function (v) { show(v, false); });
     Array.prototype.forEach.call($("nav").children, function (b) { b.classList.toggle("on", b.getAttribute("data-page") === courant); });
     if (dem) { show("v-detail"); chargerDemande(dem); }
     else if (lic) { show("v-licence"); chargerLicence(lic); }
     else if (page === "licences") { show("v-licences"); chargerLicences(); }
+    else if (page === "contacts") { show("v-contacts"); chargerContacts(); }
     else if (page === "journal") { show("v-journal"); chargerJournal(); }
     else if (page === "stats") { show("v-stats"); chargerStats(); }
     else if (page === "reglages") { show("v-reglages"); chargerReglages(); }
@@ -822,6 +856,88 @@
     document.body.appendChild(a); a.click(); a.remove();
   }
   function erreurDans(box, e) { if (!siDeconnecte(e)) box.replaceChildren(el("p", { class: "msg err", text: e.message })); }
+
+  // ---------- Renseignements : demandes du formulaire de la landing page ----------
+  var CT_STATUTS = { nouveau: "Nouveau", en_cours: "En cours", traite: "Traité", archive: "Archivé" };
+  var tousContacts = [], contactsAffiches = [];
+  function chargerContacts() {
+    var list = $("ct-list"); list.replaceChildren(el("p", { class: "empty", text: "Chargement…" }));
+    api("contacts").then(function (r) { tousContacts = r.contacts || []; afficherContacts(); }).catch(function (e) { erreurDans(list, e); });
+  }
+  function afficherContacts() {
+    var q = $("ct-q").value.trim().toLowerCase(), f = $("ct-f").value, list = $("ct-list");
+    contactsAffiches = tousContacts.filter(function (c) {
+      if (f && c.statut !== f) return false;
+      if (!q) return true;
+      return [c.nom, c.email, c.societe, c.role, c.telephone, c.message, c.note, nomOutils(c.outils)].join(" ").toLowerCase().indexOf(q) >= 0;
+    });
+    var nouveaux = tousContacts.filter(function (c) { return c.statut === "nouveau"; }).length;
+    $("ct-count").textContent = contactsAffiches.length + " demande(s) affichée(s) sur " + tousContacts.length + " · " + nouveaux + " nouvelle(s)";
+    if (!contactsAffiches.length) { list.replaceChildren(el("p", { class: "empty", text: "Aucune demande." })); return; }
+    list.replaceChildren.apply(list, contactsAffiches.map(carteContact));
+  }
+  function carteContact(c) {
+    var ouvert = false;
+    var badge = el("span", { class: "badge " + c.statut, text: CT_STATUTS[c.statut] || c.statut });
+    var info = el("table", { class: "info" }, [
+      ligneInfo("Date", frDateHeure(c.cree_le)),
+      ligneInfo("Nom", c.nom),
+      ligneInfo("Email", el("a", { href: "mailto:" + c.email, text: c.email })),
+      ligneInfo("Société", c.societe),
+      ligneInfo("Rôle", c.role),
+      ligneInfo("Téléphone", c.telephone),
+      ligneInfo("Outils souhaités", c.outils && c.outils.length ? nomOutils(c.outils) : ""),
+      ligneInfo("Consentement", c.consentement ? "Donné" : "Non"),
+      ligneInfo("Page d'origine", c.page)
+    ]);
+    var statut = el("select", {}, Object.keys(CT_STATUTS).map(function (k) { var o = el("option", { value: k, text: CT_STATUTS[k] }); if (k === c.statut) o.selected = true; return o; }));
+    var note = el("textarea", { placeholder: "Note interne (rappel, suite donnée…)" }); note.value = c.note || "";
+    var msg = el("div", { class: "msg" });
+    var enreg = el("button", { type: "button", class: "small", text: "Enregistrer", onclick: function () {
+      enreg.disabled = true; msg.className = "msg"; msg.textContent = "";
+      api("maj_contact", { id: c.id, statut: statut.value, note: note.value }).then(function () {
+        c.statut = statut.value; c.note = note.value.trim() || null;
+        badge.className = "badge " + c.statut; badge.textContent = CT_STATUTS[c.statut];
+        msg.className = "msg ok"; msg.textContent = "Enregistré.";
+      }).catch(function (e) { if (!siDeconnecte(e)) { msg.className = "msg err"; msg.textContent = e.message; } })
+        .then(function () { enreg.disabled = false; });
+    } });
+    var suppr = el("button", { type: "button", class: "danger small", text: "Supprimer", onclick: function () {
+      if (!confirm("Supprimer définitivement la demande de " + c.nom + " ?")) return;
+      api("supprimer_contact", { id: c.id }).then(function () {
+        tousContacts = tousContacts.filter(function (x) { return x.id !== c.id; }); afficherContacts();
+      }).catch(function (e) { if (!siDeconnecte(e)) { msg.className = "msg err"; msg.textContent = e.message; } });
+    } });
+    var corps = el("div", { class: "corps" }, [
+      info,
+      el("label", { text: "Message" }),
+      el("div", { class: "msgtxt", text: c.message || "(aucun message)" }),
+      el("div", { class: "ligne" }, [el("div", {}, [el("label", { text: "Statut" }), statut]), el("div", { style: "flex:2" }, [el("label", { text: "Note interne" }), note])]),
+      el("div", { class: "actions" }, [enreg, el("a", { class: "small", href: "mailto:" + c.email, style: "align-self:center" , text: "Répondre par email" }), suppr]),
+      msg
+    ]);
+    var d = el("details", { class: "ct" }, [
+      el("summary", {}, [
+        el("div", {}, [el("b", { text: c.nom }), el("div", { class: "sub", text: [c.societe, c.role, c.email].filter(Boolean).join(" · ") })]),
+        el("div", { style: "text-align:right" }, [badge, el("div", { class: "sub", text: frDateHeure(c.cree_le) })])
+      ]),
+      corps
+    ]);
+    return d;
+  }
+  function ligneInfo(k, v) {
+    return el("tr", {}, [el("td", { text: k }), el("td", {}, [typeof v === "object" && v ? v : document.createTextNode(v || "—")])]);
+  }
+  $("ct-q").addEventListener("input", afficherContacts);
+  $("ct-f").addEventListener("change", afficherContacts);
+  $("ct-csv").addEventListener("click", function () {
+    var lignes = [["Date", "Statut", "Nom", "Email", "Société", "Rôle", "Téléphone", "Outils souhaités", "Message", "Consentement", "Note interne", "Page d'origine"]];
+    contactsAffiches.forEach(function (c) {
+      lignes.push([frDateHeure(c.cree_le), CT_STATUTS[c.statut] || c.statut, c.nom, c.email, c.societe, c.role, c.telephone,
+        nomOutils(c.outils || []), c.message, c.consentement ? "Oui" : "Non", c.note, c.page]);
+    });
+    telecharger("prismal-renseignements-" + isoJour(new Date()) + ".csv", lignes);
+  });
 
   // ---------- Licences : liste ----------
   var toutesLicences = [], licencesAffichees = [];
