@@ -189,6 +189,7 @@
             <legend>Outils inclus</legend>
             <label class="choice"><input type="checkbox" name="li-outils" value="cotation">Cotation Auto</label>
             <label class="choice"><input type="checkbox" name="li-outils" value="plansvente">Plans de vente</label>
+            <label class="choice"><input type="checkbox" name="li-outils" value="copiervue">Copier Vue</label>
           </fieldset>
           <label for="li-note">Note interne</label>
           <textarea id="li-note"></textarea>
@@ -275,6 +276,7 @@
               <legend>Outils inclus</legend>
               <label class="choice"><input type="checkbox" name="outils" value="cotation" checked>Cotation Auto</label>
               <label class="choice"><input type="checkbox" name="outils" value="plansvente" checked>Plans de vente</label>
+              <label class="choice"><input type="checkbox" name="outils" value="copiervue">Copier Vue</label>
             </fieldset>
           </div>
 
@@ -358,7 +360,7 @@
   var SUPABASE_URL = "https://pbsonzugrweiiiqfgzct.supabase.co";
   var PUBLISHABLE_KEY = "sb_publishable_dyAuIAfqNdST7raOkRHxjQ_VFcxQr7s";
   var SESSION_KEY = "prismal_admin_session";
-  var OUTILS = { cotation: "Cotation Auto", plansvente: "Plans de vente" };
+  var OUTILS = { cotation: "Cotation Auto", plansvente: "Plans de vente", copiervue: "Copier Vue" };
 
   var $ = function (id) { return document.getElementById(id); };
   function show(id, on) { $(id).classList.toggle("hidden", on === false); }
