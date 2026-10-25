@@ -18,6 +18,8 @@
   .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px 22px; margin-bottom:16px; }
   .narrow { max-width:420px; margin:10vh auto 0; }
   .brand { font-weight:700; letter-spacing:.04em; color:var(--accent); }
+  .logo { display:block; height:40px; width:auto; }
+  .logo-grand { height:90px; margin:0 0 14px; }
   header { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
   header .who { color:var(--muted); font-size:13px; }
   h1 { font-size:20px; margin:0 0 10px; }
@@ -70,7 +72,7 @@
 
   <!-- Connexion -->
   <section id="v-login" class="card narrow hidden">
-    <div class="brand">PRISMAL</div>
+    <picture><source srcset="prismal-logo-sombre.png" media="(prefers-color-scheme: dark)"><img class="logo logo-grand" src="prismal-logo.png" alt="Prismal"></picture>
     <h1>Administration</h1>
     <p>Connectez-vous avec votre compte Prismal administrateur.</p>
     <form id="f-login">
@@ -87,7 +89,7 @@
   <!-- Application -->
   <div id="v-app" class="hidden">
     <header>
-      <div><span class="brand">PRISMAL</span> <span style="color:var(--muted)">· Administration</span></div>
+      <div style="display:flex;align-items:center;gap:10px"><picture><source srcset="prismal-logo-sombre.png" media="(prefers-color-scheme: dark)"><img class="logo" src="prismal-logo.png" alt="Prismal"></picture> <span style="color:var(--muted)">· Administration</span></div>
       <div><span id="who" class="who"></span> <button id="logout" class="ghost small" type="button">Déconnexion</button></div>
     </header>
 
